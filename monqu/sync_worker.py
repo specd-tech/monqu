@@ -1,4 +1,3 @@
-from SECRET import MONGO_URI
 from base_worker import BaseWorker
 
 
@@ -36,7 +35,3 @@ class SyncWorker(BaseWorker):
             for func in self._local_queue:
                 self.call_func(func)
                 self._local_queue.remove(func)
-
-
-mq = StandardWorker(MONGO_URI)
-mq.worker()
