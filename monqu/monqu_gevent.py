@@ -16,7 +16,8 @@ from base_worker import BaseWorker
 class MonquServer:
     def __init__(self, mongo_connection: str, database: str = 'monqu', queue: str = 'queue'):
         self.client = MongoClient(mongo_connection)
-        self.col = self.client[database][queue]
+        self.database = self.client[database]
+        self.col = self.database[queue]
         self._tasks = list()
         self._bulk_queue = list()
 
@@ -27,7 +28,6 @@ class MonquServer:
             kwargs: dict,
             priority: int,
             retries: int
-            # queue as option
     ) -> dict:
         payload = {
             'status': None,
@@ -48,11 +48,12 @@ class MonquServer:
             func: Callable,
             args: Union[tuple, list] = None,
             kwargs: dict = None,
+            queue: str = None,
             priority: int = 0,
             retries: int = 0
-            # queue as option
     ):
-        self._tasks.append(gevent.spawn(self.col.insert_one, self._payload(func, args, kwargs, priority, retries)))
+        queue = queue if queue else self.col
+        self._tasks.append(gevent.spawn(queue.insert_one, self._payload(func, args, kwargs, priority, retries)))
 
     def bulk_enqueue(
             self,
@@ -62,17 +63,17 @@ class MonquServer:
             priority: int = 0,
             retries: int = 0
             # queue as option
-    ):
+    ) -> dict:
         self._bulk_queue.append(self._payload(func, args, kwargs, priority, retries))
 
     def bulk_insert(self):
         self._tasks.append(gevent.spawn(self.col.insert_many, self._bulk_queue))
 
-    def task(self, original_func: Callable = None, priority: int = 0, retries: int = 1):
+    def task(self, original_func: Callable = None, queue: str = None, priority: int = 0, retries: int = 1):
         def wrapper(func):
             @wraps(func)
             def enqueue_wrapper(*args, **kwargs):
-                self.enqueue(func, args, kwargs, priority, retries)
+                self.enqueue(func, args, kwargs, queue, priority, retries)
             return enqueue_wrapper
 
         if original_func:
