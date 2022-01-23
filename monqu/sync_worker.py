@@ -2,7 +2,7 @@ from SECRET import MONGO_URI
 from base_worker import BaseWorker
 
 
-class StandardWorker(BaseWorker):
+class SyncWorker(BaseWorker):
     def __init__(
             self,
             mongo_connection: str,
