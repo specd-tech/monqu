@@ -1,19 +1,13 @@
-from SECRET import MONGO_URI
 from gevent.monkey import patch_all; patch_all()
 import gevent
 from gevent.pool import Pool
-from cloudpickle import register_pickle_by_value
 from cloudpickle.cloudpickle_fast import dumps
-import time
 from pymongo import MongoClient
 from bson import Binary
 from typing import Union, Callable
 from functools import wraps
-# remove
-import sniffio
 
 
-# Non-gevent version
 # make sure _tasks is correct and doesn't need to be Pool()
 # find replacemnt for object
 # maybe switch queue to collection
@@ -97,27 +91,3 @@ class MonquServer:
 
     def wait(self):
         gevent.joinall(self._tasks)
-
-
-mq = MonquServer(MONGO_URI)
-mq.wait()
-
-
-# @mq.task
-# def get(url: str):
-#     try:
-#         response = httpx.get(url, timeout=6)
-#         if response.status_code == 200:
-#             return response
-#
-#         elif (code := response.status_code) != 200:
-#             print(f'ERROR STATUS CODE: {code}')
-#
-#     except httpx.RequestError or httpx.TimeoutException as exc:
-#         print(f'An error occurred while requesting {exc.request.url!r}.')
-
-
-# register_pickle_by_value(httpx)
-#
-# for i in range(10):
-#     get('https://ip.selectrl.workers.dev')
