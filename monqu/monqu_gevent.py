@@ -63,7 +63,7 @@ class MonquServer:
             priority: int = 0,
             retries: int = 0
             # queue as option
-    ) -> dict:
+    ):
         self._bulk_queue.append(self._payload(func, args, kwargs, priority, retries))
 
     def bulk_insert(self):
