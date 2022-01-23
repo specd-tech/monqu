@@ -1,27 +1,18 @@
-from SECRET import MONGO_URI
-import cloudpickle
 from cloudpickle.cloudpickle_fast import dumps
-import time
 from pymongo import MongoClient
 from bson import Binary
 from typing import Union, Callable
 from functools import wraps
-import requests
-import importlib
-cloudpickle.register_pickle_by_value(requests)
-print(cloudpickle.list_registry_pickle_by_value())
 
 
-# Non-gevent version
-# make sure _tasks is correct and doesn't need to be Pool()
 # find replacemnt for object
 # maybe switch queue to collection
 class MonquServer:
     def __init__(self, mongo_connection: str, database: str = 'monqu', queue: str = 'queue'):
         self.client = MongoClient(mongo_connection)
         self.col = self.client[database][queue]
-        self._tasks = list()
-        self._bulk_queue = list()
+        self._tasks = []
+        self._bulk_queue = []
 
     def enqueue(
             self,
@@ -93,20 +84,3 @@ class MonquServer:
         if original_func:
             return wrapper(original_func)
         return wrapper
-
-
-mq = MonquServer(MONGO_URI)
-
-
-@mq.task
-def get(url: str):
-    response = requests.get(url, timeout=6)
-    if response.status_code == 200:
-        return response
-
-    elif (code := response.status_code) != 200:
-        print(f'ERROR STATUS CODE: {code}')
-
-
-# for i in range(10):
-#     get('https://ip.selectrl.workers.dev')
