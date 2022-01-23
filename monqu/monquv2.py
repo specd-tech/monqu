@@ -14,15 +14,15 @@ class MonquServer:
         self._tasks = []
         self._bulk_queue = []
 
-    def enqueue(
-            self,
+    @staticmethod
+    def _payload(
             func: Callable,
-            args: Union[tuple, list] = None,
-            kwargs: dict = None,
-            priority: int = 0,
-            retries: int = 0
+            args: Union[tuple, list],
+            kwargs: dict,
+            priority: int,
+            retries: int
             # queue as option
-    ):
+    ) -> dict:
         payload = {
             'status': None,
             'priority': priority,
@@ -35,7 +35,18 @@ class MonquServer:
         if kwargs:
             payload['kwargs'] = Binary(dumps(kwargs))
 
-        self.col.insert_one(payload)
+        return payload
+
+    def enqueue(
+            self,
+            func: Callable,
+            args: Union[tuple, list] = None,
+            kwargs: dict = None,
+            priority: int = 0,
+            retries: int = 0
+            # queue as option
+    ):
+        self.col.insert_one(self._payload(func, args, kwargs, priority, retries))
 
     def bulk_enqueue(
             self,
@@ -46,19 +57,7 @@ class MonquServer:
             retries: int = 0
             # queue as option
     ):
-        payload = {
-            'status': None,
-            'priority': priority,
-            'retries': retries,
-            'func': Binary(dumps(func))
-        }
-        if args:
-            payload['args'] = Binary(dumps(args))
-
-        if kwargs:
-            payload['kwargs'] = Binary(dumps(kwargs))
-
-        self._bulk_queue.append(payload)
+        self._bulk_queue.append(self._payload(func, args, kwargs, priority, retries))
 
     def bulk_insert(self):
         self.col.insert_many(self._bulk_queue)
