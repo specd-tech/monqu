@@ -20,6 +20,7 @@ class SyncWorker(BaseWorker):
         # get_func should be turned in to pattern match
         get_func = self.fifo
         while True:
+            # Fix so it works with 0 prefetch
             left = self.prefetch - len(self._local_queue)
 
             for _ in range(left):

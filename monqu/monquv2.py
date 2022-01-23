@@ -5,7 +5,6 @@ from typing import Union, Callable
 from functools import wraps
 
 
-# find replacemnt for object
 # maybe switch queue to collection
 class MonquServer:
     def __init__(self, mongo_connection: str, database: str = 'monqu', queue: str = 'queue'):

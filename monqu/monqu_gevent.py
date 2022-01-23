@@ -11,15 +11,14 @@ from base_worker import BaseWorker
 
 
 # make sure _tasks is correct and doesn't need to be Pool()
-# find replacemnt for object
 # maybe switch queue to collection
 class MonquServer:
     def __init__(self, mongo_connection: str, database: str = 'monqu', queue: str = 'queue'):
         self.client = MongoClient(mongo_connection)
         self.database = self.client[database]
         self.col = self.database[queue]
-        self._tasks = list()
-        self._bulk_queue = list()
+        self._tasks = []
+        self._bulk_queue = []
 
     @staticmethod
     def _payload(
