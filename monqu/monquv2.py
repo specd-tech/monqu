@@ -3,15 +3,17 @@ from pymongo import MongoClient
 from bson import Binary
 from typing import Union, Callable
 from functools import wraps
+from collections import defaultdict
 
 
-# maybe switch queue to collection
+# flip ret and proiety
 class MonquServer:
     def __init__(self, mongo_connection: str, database: str = 'monqu', queue: str = 'queue'):
         self.client = MongoClient(mongo_connection)
-        self.col = self.client[database][queue]
-        self._tasks = []
-        self._bulk_queue = []
+        self.database = self.client[database]
+        self.col = self.database[queue]
+        self.queue = queue
+        self._bulk_queue = defaultdict(list)
 
     @staticmethod
     def _payload(
@@ -52,14 +54,17 @@ class MonquServer:
             func: Callable,
             args: Union[tuple, list] = None,
             kwargs: dict = None,
+            queue: str = None,
             priority: int = 0,
             retries: int = 0
-            # queue as option
     ):
-        self._bulk_queue.append(self._payload(func, args, kwargs, priority, retries))
+        queue = queue if queue else self.queue
+        self._bulk_queue[queue] += [self._payload(func, args, kwargs, priority, retries)]
 
     def bulk_insert(self):
-        self.col.insert_many(self._bulk_queue)
+        # Change terms?
+        for queue, tasks in self._bulk_queue.items():
+            self.database[queue].insert_many(tasks)
 
     def task(self, original_func: Callable = None, queue: str = None, priority: int = 0, retries: int = 1):
         def wrapper(func):
@@ -72,11 +77,11 @@ class MonquServer:
             return wrapper(original_func)
         return wrapper
 
-    def bulk_task(self, original_func: Callable = None, priority: int = 0, retries: int = 1):
+    def bulk_task(self, original_func: Callable = None, queue: str = None, priority: int = 0, retries: int = 1):
         def wrapper(func):
             @wraps(func)
             def bulk_enqueue_wrapper(*args, **kwargs):
-                self.bulk_enqueue(func, args, kwargs, priority, retries)
+                self.bulk_enqueue(func, args, kwargs, queue, priority, retries)
             return bulk_enqueue_wrapper
 
         if original_func:
