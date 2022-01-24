@@ -150,6 +150,7 @@ class GeventWorker(BaseWorker):
         # Add pause logic
         get_func = self.fifo
         while True:
+            # Fix so it works with 0 prefetch for other worker types
             left = self.prefetch - len(self._local_queue)
 
             for _ in range(left):
