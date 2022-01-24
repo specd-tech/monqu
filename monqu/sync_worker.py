@@ -3,16 +3,16 @@ from base_worker import BaseWorker
 
 class SyncWorker(BaseWorker):
     def __init__(
-            self,
-            mongo_connection: str,
-            database: str = 'monqu',
-            queue: str = 'queue',
-            prefetch: int = 0
+        self,
+        mongo_connection: str,
+        database: str = "monqu",
+        queue: str = "queue",
+        prefetch: int = 0,
     ):
         super().__init__(mongo_connection, database, queue)
         self.prefetch = prefetch
 
-    def worker(self, order: str = 'fifo'):
+    def worker(self, order: str = "fifo"):
         # add timer
         # add patterning matching
         # Add pause logic
