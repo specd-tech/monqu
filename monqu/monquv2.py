@@ -5,6 +5,11 @@ from typing import Union, Callable
 from functools import wraps
 from collections import defaultdict
 
+"""
+TODO:
+Check if value error shows properly in different functions
+"""
+
 
 # flip ret and proiety
 class MonquServer:
@@ -25,6 +30,10 @@ class MonquServer:
         priority: int,
         retries: int,
     ) -> dict:
+        if retries < 0:
+            raise ValueError("retries must be greater than or equal to 0")
+        if priority < 0:
+            raise ValueError("priority must be greater than or equal to 0")
         payload = {
             "status": None,
             "priority": priority,

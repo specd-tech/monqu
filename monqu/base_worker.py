@@ -40,19 +40,19 @@ class BaseWorker:
                 },
             )
 
-        except Exception as err:
+        except Exception as exc:
             # Check if it needs to be == pr <=
             if func.get("retries") == 0:
                 self.col.find_one_and_update(
                     # see if Object id is needed
                     {"_id": ObjectId(func.get("_id"))},
-                    {"$set": {"status": "failed", "error": repr(err)}},
+                    {"$set": {"status": "failed", "error": repr(exc)}},
                 )
             else:
                 self.col.find_one_and_update(
                     {"_id": ObjectId(func.get("_id"))},
                     {
-                        "$set": {"status": "retry", "error": repr(err)},
+                        "$set": {"status": "retry", "error": repr(exc)},
                         "$inc": {"retries": -1},
                     },
                 )

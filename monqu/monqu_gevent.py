@@ -34,6 +34,10 @@ class MonquServer:
         priority: int,
         retries: int,
     ) -> dict:
+        if retries < 0:
+            raise ValueError("retries must be greater than or equal to 0")
+        if priority < 0:
+            raise ValueError("priority must be greater than or equal to 0")
         payload = {
             "status": None,
             "priority": priority,
