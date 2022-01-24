@@ -6,12 +6,12 @@ from time import time
 
 class ProcessWorker(BaseWorker):
     def __init__(
-            self,
-            mongo_connection: str,
-            database: str = 'monqu',
-            queue: str = 'queue',
-            processes: int = cpu_count() if cpu_count() else 2,
-            prefetch: int = 0
+        self,
+        mongo_connection: str,
+        database: str = "monqu",
+        queue: str = "queue",
+        processes: int = cpu_count() if cpu_count() else 2,
+        prefetch: int = 0,
     ):
         super().__init__(mongo_connection, database, queue)
         self.processes = processes
@@ -23,17 +23,17 @@ class ProcessWorker(BaseWorker):
         self.task_pool.close()
         self.task_pool.join()
 
-    def worker(self, order: str = 'fifo'):
+    def worker(self, order: str = "fifo"):
         # add timer
         # add patterning matching
         # Add pause logic
         get_func = self.fifo
         while True:
-            print('Loop')
+            print("Loop")
             left = self.prefetch - len(self._local_queue)
-            print(f'Left: {left}')
+            print(f"Left: {left}")
             for _ in range(left):
-                print('Range')
+                print("Range")
                 if func := get_func():
                     self._local_queue.append(func)
 
@@ -42,7 +42,7 @@ class ProcessWorker(BaseWorker):
 
                 else:
                     break
-            print('Calling Processes')
+            print("Calling Processes")
             for func in self._local_queue:
                 self.task_pool.apply_async(self.call_func, func)
                 self._local_queue.remove(func)
@@ -52,12 +52,10 @@ class ProcessWorker(BaseWorker):
                 #     break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     mq = ProcessWorker(MONGO_URI, processes=4, prefetch=0)
     t0 = time()
     mq.worker()
     mq.wait()
     t1 = time()
     print(t1 - t0)
-
-
