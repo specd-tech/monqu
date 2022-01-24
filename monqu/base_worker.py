@@ -40,19 +40,19 @@ class BaseWorker:
                 },
             )
 
-        except Exception as exc:
+        except Exception as err:
             # Check if it needs to be == pr <=
             if func.get("retries") == 0:
                 self.col.find_one_and_update(
                     # see if Object id is needed
                     {"_id": ObjectId(func.get("_id"))},
-                    {"$set": {"status": "failed", "error": exc}},
+                    {"$set": {"status": "failed", "error": repr(err)}},
                 )
             else:
                 self.col.find_one_and_update(
                     {"_id": ObjectId(func.get("_id"))},
                     {
-                        "$set": {"status": "retry", "error": exc},
+                        "$set": {"status": "retry", "error": repr(err)},
                         "$inc": {"retries": -1},
                     },
                 )
@@ -73,6 +73,7 @@ class BaseWorker:
             return None
 
     def _random_id(self) -> Union[str, None]:
+        # Optimize to get func instead aggregate
         # add way to use proities with sample
         sample = list(
             self.col.aggregate(
