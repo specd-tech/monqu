@@ -4,6 +4,7 @@ patch_all()
 import gevent
 from gevent import wait
 from gevent.pool import Pool
+from os import cpu_count
 from cloudpickle.cloudpickle_fast import dumps
 from pymongo import MongoClient
 from bson import Binary
@@ -133,10 +134,13 @@ class GeventWorker(BaseWorker):
         mongo_connection: str,
         database: str = "monqu",
         queue: str = "queue",
-        greenlet_threads: int = 10,
+        # Best thread count? same as executor
+        greenlet_threads: int = (cpu_count() or 1) + 4,
         prefetch: int = 0,
     ):
         super().__init__(mongo_connection, database, queue)
+        if greenlet_threads <= 0:
+            raise ValueError("greenlet_threads must be greater than 0")
         self.task_pool = Pool(greenlet_threads)
         # change to task pool
         self._task_pool = list()

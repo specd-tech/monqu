@@ -11,11 +11,13 @@ class SyncWorker(BaseWorker):
         super().__init__(mongo_connection, database, queue)
 
     def worker(self, order: str = "fifo"):
-        # add timer
-        # add patterning matching
-        # Add pause logic
-
-        # get_func should be turned in to pattern match
+        # match order:
+        #     case "fifo":
+        #         get_func = self.fifo
+        #     case 404:
+        #         return "Not found"
+        #     case _:
+        #         raise ValueError("order is not a correct value")
         get_func = self.fifo
         while True:
             if func := get_func():

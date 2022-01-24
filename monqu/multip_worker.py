@@ -2,6 +2,7 @@ from SECRET import MONGO_URI
 from base_worker import BaseWorker
 from multiprocessing import Pool, cpu_count
 from time import time
+from concurrent.futures import ThreadPoolExecutor
 
 
 class ProcessWorker(BaseWorker):
@@ -16,7 +17,6 @@ class ProcessWorker(BaseWorker):
         super().__init__(mongo_connection, database, queue)
         self.processes = processes
         self.task_pool = Pool(self.processes)
-        # add or * greenlet_threads for prefetch
         self.prefetch = self.processes + prefetch
 
     def wait(self):
