@@ -1,6 +1,7 @@
 from base_worker import BaseWorker
 
 
+# Prefetch
 class SyncWorker(BaseWorker):
     def __init__(
         self,
