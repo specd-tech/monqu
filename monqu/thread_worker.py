@@ -40,6 +40,6 @@ class ThreadWorker(BaseWorker):
 
                 else:
                     break
-            # max worker
+
             with ThreadPoolExecutor(max_workers=self.threads) as executor:
                 executor.map(self.call_func, self._local_queue)

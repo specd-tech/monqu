@@ -1,10 +1,10 @@
 from gevent.monkey import patch_all
 
 patch_all()
+from base_worker import BaseWorker
 from os import cpu_count
 from gevent import wait
 from gevent.pool import Pool
-from base_worker import BaseWorker
 
 
 class GeventWorker(BaseWorker):
@@ -31,7 +31,7 @@ class GeventWorker(BaseWorker):
         # Rename task_pool and _task_pool
         self.task_pool = Pool(greenlet_threads)
         # change to task pool
-        self._task_pool = list()
+        self._task_pool = []
         # self.prefetch_pool = Pool(self.prefetch)
         # self._prefetch_pool = list()
 
