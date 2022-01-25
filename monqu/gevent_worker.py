@@ -1,5 +1,7 @@
-from SECRET import MONGO_URI
-from gevent.monkey import patch_all; patch_all()
+from gevent.monkey import patch_all
+
+patch_all()
+from os import cpu_count
 from gevent import wait
 from gevent.pool import Pool
 from base_worker import BaseWorker
@@ -7,18 +9,23 @@ from base_worker import BaseWorker
 
 class GeventWorker(BaseWorker):
     def __init__(
-            self,
-            mongo_connection: str,
-            database: str = 'monqu',
-            queue: str = 'queue',
-            greenlet_threads: int = 10,
-            prefetch: int = 0
+        self,
+        mongo_connection: str,
+        database: str = "monqu",
+        queue: str = "queue",
+        # Best thread count? same as executor
+        greenlet_threads: int = (cpu_count() or 2) + 4,
+        prefetch: int = 0,
     ):
         super().__init__(mongo_connection, database, queue)
+        if greenlet_threads <= 0:
+            raise ValueError("greenlet_threads must be greater than 0")
+        # Rename task_pool and _task_pool
         self.task_pool = Pool(greenlet_threads)
         # change to task pool
         self._task_pool = list()
-        # add or * greenlet_threads for prefetch
+        if prefetch < 0:
+            raise ValueError("prefetch must be greater than or equal to 0")
         self.prefetch = greenlet_threads + prefetch
         # self.prefetch_pool = Pool(self.prefetch)
         # self._prefetch_pool = list()
@@ -26,12 +33,13 @@ class GeventWorker(BaseWorker):
     def wait(self):
         wait(self._task_pool)
 
-    def worker(self, order: str = 'fifo'):
+    def worker(self, order: str = "fifo"):
         # add timer
         # add patterning matching
         # Add pause logic
         get_func = self.fifo
         while True:
+            # Fix so it works with 0 prefetch for other worker types
             left = self.prefetch - len(self._local_queue)
 
             for _ in range(left):
@@ -51,8 +59,3 @@ class GeventWorker(BaseWorker):
                 # maybe put at top of for loop
                 if self.task_pool.full():
                     break
-
-
-mq = GeventWorker(MONGO_URI, greenlet_threads=10, prefetch=20)
-mq.worker()
-mq.wait()
