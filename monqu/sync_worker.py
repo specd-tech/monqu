@@ -7,13 +7,15 @@ class SyncWorker(BaseWorker):
         mongo_connection: str,
         database: str = "monqu",
         queue: str = "queue",
-        prefetch: int = 1,
+        prefetch: int = 0,
     ):
+        if prefetch < 0:
+            raise ValueError("prefetch must be greater than or equal to 0")
         super().__init__(
             mongo_connection=mongo_connection,
             database=database,
             queue=queue,
-            prefetch=prefetch,
+            prefetch=1 + prefetch,
         )
 
     # Make type hint for fifo, random, and stack
