@@ -14,7 +14,6 @@ class ThreadWorker(BaseWorker):
     ):
         if threads <= 0:
             raise ValueError("threads must be greater than 0")
-
         self.threads = threads
 
         if prefetch < 0:

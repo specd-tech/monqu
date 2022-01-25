@@ -2,15 +2,11 @@ from gevent.monkey import patch_all
 
 patch_all()
 import gevent
-from gevent import wait
-from gevent.pool import Pool
-from os import cpu_count
 from cloudpickle.cloudpickle_fast import dumps
 from pymongo import MongoClient
 from bson import Binary
 from typing import Union, Callable
 from functools import wraps
-from base_worker import BaseWorker
 from collections import defaultdict
 
 

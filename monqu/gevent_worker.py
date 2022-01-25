@@ -17,16 +17,21 @@ class GeventWorker(BaseWorker):
         greenlet_threads: int = (cpu_count() or 2) + 4,
         prefetch: int = 0,
     ):
-        super().__init__(mongo_connection, database, queue)
         if greenlet_threads <= 0:
             raise ValueError("greenlet_threads must be greater than 0")
+
+        if prefetch < 0:
+            raise ValueError("prefetch must be greater than or equal to 0")
+        super().__init__(
+            mongo_connection=mongo_connection,
+            database=database,
+            queue=queue,
+            prefetch=greenlet_threads + prefetch,
+        )
         # Rename task_pool and _task_pool
         self.task_pool = Pool(greenlet_threads)
         # change to task pool
         self._task_pool = list()
-        if prefetch < 0:
-            raise ValueError("prefetch must be greater than or equal to 0")
-        self.prefetch = greenlet_threads + prefetch
         # self.prefetch_pool = Pool(self.prefetch)
         # self._prefetch_pool = list()
 
