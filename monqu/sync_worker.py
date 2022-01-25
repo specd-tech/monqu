@@ -24,5 +24,5 @@ class SyncWorker(BaseWorker):
             if func := get_func():
                 self.call_func(func)
 
-            elif func is None:
+            else:
                 self.watch()

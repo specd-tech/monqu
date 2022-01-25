@@ -62,7 +62,7 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not callable(func):
+        if func is not None and not callable(func):
             # Correct wording
             raise TypeError("func must be callable")
         queue = queue if queue else self.col
@@ -81,7 +81,7 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not callable(func):
+        if func is not None and not callable(func):
             # Correct wording
             raise TypeError("func must be callable")
         queue = queue if queue else self.queue
@@ -151,6 +151,8 @@ class GeventWorker(BaseWorker):
         self.task_pool = Pool(greenlet_threads)
         # change to task pool
         self._task_pool = list()
+        if prefetch < 0:
+            raise ValueError("prefetch must be greater than or equal to 0")
         self.prefetch = greenlet_threads + prefetch
         # self.prefetch_pool = Pool(self.prefetch)
         # self._prefetch_pool = list()

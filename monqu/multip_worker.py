@@ -15,8 +15,12 @@ class ProcessWorker(BaseWorker):
         prefetch: int = 0,
     ):
         super().__init__(mongo_connection, database, queue)
+        if processes <= 0:
+            raise ValueError("processes must be greater than 0")
         self.processes = processes
         self.task_pool = Pool(self.processes)
+        if prefetch < 0:
+            raise ValueError("prefetch must be greater than or equal to 0")
         self.prefetch = self.processes + prefetch
 
     def wait(self):

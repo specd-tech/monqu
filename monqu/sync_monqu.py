@@ -57,7 +57,7 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not callable(func):
+        if func is not None and not callable(func):
             # Correct wording
             raise TypeError("func must be callable")
         queue = queue if queue else self.col
@@ -72,7 +72,7 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not callable(func):
+        if func is not None and not callable(func):
             # Correct wording
             raise TypeError("func must be callable")
         queue = queue if queue else self.queue
