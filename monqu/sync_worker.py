@@ -7,9 +7,14 @@ class SyncWorker(BaseWorker):
         mongo_connection: str,
         database: str = "monqu",
         queue: str = "queue",
-        prefetch: int = 1
+        prefetch: int = 1,
     ):
-        super().__init__(mongo_connection=mongo_connection, database=database, queue=queue, prefetch=prefetch)
+        super().__init__(
+            mongo_connection=mongo_connection,
+            database=database,
+            queue=queue,
+            prefetch=prefetch,
+        )
 
     # Make type hint for fifo, random, and stack
     def worker(self, order: str = "fifo"):
