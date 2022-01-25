@@ -8,12 +8,17 @@ from typing import Union
 
 class BaseWorker:
     def __init__(
-        self, mongo_connection: str, database: str = "monqu", queue: str = "queue"
+        self,
+        mongo_connection: str,
+        database: str = "monqu",
+        queue: str = "queue",
+        prefetch: int = 0,
     ):
         self.client = MongoClient(mongo_connection)
         # multiqueue
         self.col = self.client[database][queue]
-        self._local_queue = list()
+        self._local_queue = []
+        self.prefetch = prefetch
 
     # change back to start_time as arg vs in dict
     def call_func(self, func: dict):
@@ -71,6 +76,28 @@ class BaseWorker:
             return func
         else:
             return None
+
+    def trans_fifo(self):
+        with self.client.start_session() as session:
+            with session.start_transaction():
+                cursor = self.col.find(
+                    {"status": {"$in": [None, "retry"]}},
+                    sort=[("priority", -1), ("_id", 1)],
+                    session=session,
+                ).limit(self.prefetch)
+
+                funcs = [func for func in cursor]
+
+                if funcs:
+                    start_time = datetime.now()
+                    self.col.update_many(
+                        {"_id": {"$in": [func.get("_id") for func in funcs]}},
+                        {"$set": {"status": "running", "start_time": start_time}},
+                        session=session,
+                    )
+                    return funcs
+                else:
+                    return None
 
     def _random_id(self) -> Union[str, None]:
         # Optimize to get func instead aggregate

@@ -9,18 +9,22 @@ class ThreadWorker(BaseWorker):
         mongo_connection: str,
         database: str = "monqu",
         queue: str = "queue",
-        # Best thread count? same as executor
         threads: int = (cpu_count() or 2) + 4,
         prefetch: int = 0,
     ):
-        super().__init__(mongo_connection, database, queue)
         if threads <= 0:
             raise ValueError("threads must be greater than 0")
-        # Does threads need to be class variable
+
         self.threads = threads
+
         if prefetch < 0:
             raise ValueError("prefetch must be greater than or equal to 0")
-        self.prefetch = self.threads + prefetch
+        super().__init__(
+            mongo_connection=mongo_connection,
+            database=database,
+            queue=queue,
+            prefetch=self.threads + prefetch,
+        )
 
     def worker(self, order: str = "fifo"):
         # add timer
@@ -38,5 +42,5 @@ class ThreadWorker(BaseWorker):
                 else:
                     break
             # max worker
-            with ThreadPoolExecutor() as executor:
+            with ThreadPoolExecutor(max_workers=self.threads) as executor:
                 executor.map(self.call_func, self._local_queue)
