@@ -62,8 +62,8 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not None and not callable(func):
-            # Correct wording and test if None is necessary
+        if func is not callable(func):
+            # Correct wording
             raise TypeError("func must be callable")
         queue = queue if queue else self.col
         self._tasks.append(
@@ -81,8 +81,8 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not None and not callable(func):
-            # Correct wording and test if None is necessary
+        if func is not callable(func):
+            # Correct wording
             raise TypeError("func must be callable")
         queue = queue if queue else self.queue
         self._bulk_queue[queue] += [
