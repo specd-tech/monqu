@@ -10,6 +10,7 @@ class SyncWorker(BaseWorker):
     ):
         super().__init__(mongo_connection, database, queue)
 
+    # Make type hint for fifo, random, and stack
     def worker(self, order: str = "fifo"):
         # match order:
         #     case "fifo":
