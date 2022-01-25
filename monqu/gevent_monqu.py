@@ -62,6 +62,9 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
+        if func is not None and not callable(func):
+            # Correct wording and test if None is necessary
+            raise TypeError("func must be callable")
         queue = queue if queue else self.col
         self._tasks.append(
             gevent.spawn(
@@ -78,6 +81,9 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
+        if func is not None and not callable(func):
+            # Correct wording and test if None is necessary
+            raise TypeError("func must be callable")
         queue = queue if queue else self.queue
         self._bulk_queue[queue] += [
             self._payload(func, args, kwargs, priority, retries)
@@ -145,7 +151,6 @@ class GeventWorker(BaseWorker):
         self.task_pool = Pool(greenlet_threads)
         # change to task pool
         self._task_pool = list()
-        # add or * greenlet_threads for prefetch
         self.prefetch = greenlet_threads + prefetch
         # self.prefetch_pool = Pool(self.prefetch)
         # self._prefetch_pool = list()

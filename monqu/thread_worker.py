@@ -17,5 +17,4 @@ class ThreadWorker(BaseWorker):
             raise ValueError("threads must be greater than 0")
         # Does threads need to be class var
         self.threads = threads
-        # add or * greenlet_threads for prefetch
         self.prefetch = self.threads + prefetch
