@@ -135,12 +135,13 @@ class GeventWorker(BaseWorker):
         database: str = "monqu",
         queue: str = "queue",
         # Best thread count? same as executor
-        greenlet_threads: int = (cpu_count() or 1) + 4,
+        greenlet_threads: int = (cpu_count() or 2) + 4,
         prefetch: int = 0,
     ):
         super().__init__(mongo_connection, database, queue)
         if greenlet_threads <= 0:
             raise ValueError("greenlet_threads must be greater than 0")
+        # Rename task_pool and _task_pool
         self.task_pool = Pool(greenlet_threads)
         # change to task pool
         self._task_pool = list()
