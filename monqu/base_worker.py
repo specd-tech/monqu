@@ -3,7 +3,6 @@ from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 from bson import Binary, ObjectId
 from datetime import datetime
-from typing import Union
 
 
 class BaseWorker:
@@ -62,7 +61,7 @@ class BaseWorker:
                     },
                 )
 
-    def fifo(self):
+    def fifo(self) -> dict | None:
         start_time = datetime.now()
 
         func = self.col.find_one_and_update(
@@ -77,7 +76,8 @@ class BaseWorker:
         else:
             return None
 
-    def trans_fifo(self):
+    # Check if type hinting is correct
+    def trans_fifo(self) -> list[dict] | None:
         with self.client.start_session() as session:
             with session.start_transaction():
                 cursor = self.col.find(
@@ -100,7 +100,7 @@ class BaseWorker:
                 else:
                     return None
 
-    def _random_id(self) -> Union[str, None]:
+    def _random_id(self) -> str | None:
         # Optimize to get func instead aggregate
         # add way to use proities with sample
         sample = list(
@@ -117,7 +117,7 @@ class BaseWorker:
         else:
             return None
 
-    def random(self):
+    def random(self) -> dict | None:
         start_time = datetime.now()
         # add condtion to check if status is None or running depending on how find_one_and works
         func = self.col.find_one_and_update(
@@ -132,7 +132,7 @@ class BaseWorker:
         else:
             return None
 
-    def by_id(self, mongo_id: str):
+    def by_id(self, mongo_id: str) -> dict | None:
         start_time = datetime.now()
         # Check staus to see if it has been complted maybe make this for failed tasks
         func = self.col.find_one_and_update(
