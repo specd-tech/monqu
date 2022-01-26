@@ -21,7 +21,7 @@ class BaseWorker:
         self.prefetch = prefetch
 
     # change back to start_time as arg vs in dict
-    def call_func(self, func: dict):
+    def call_func(self, func: dict, start_time: datetime):
         try:
             if func.get("args") and func.get("kwargs"):
                 returned = loads(func.get("func"))(
@@ -39,7 +39,7 @@ class BaseWorker:
                 {"_id": ObjectId(func.get("_id"))},
                 {
                     "status": "completed",
-                    "start_time": func.get("start_time"),
+                    "start_time": start_time,
                     "end_time": datetime.now(),
                     "returned": Binary(dumps(returned)) if returned else None,
                 },
@@ -72,8 +72,7 @@ class BaseWorker:
         )
 
         if func:
-            func["start_time"] = start_time
-            return func
+            return func, start_time
         else:
             return None
 
@@ -95,7 +94,7 @@ class BaseWorker:
                         {"$set": {"status": "running", "start_time": start_time}},
                         session=session,
                     )
-                    return funcs
+                    return funcs, start_time
                 else:
                     return None
 
@@ -126,8 +125,7 @@ class BaseWorker:
         )
 
         if func:
-            func["start_time"] = start_time
-            return func
+            return func, start_time
         else:
             return None
 
@@ -140,8 +138,7 @@ class BaseWorker:
 
         # Change this to return error or something
         if func:
-            func["start_time"] = start_time
-            return func
+            return func, start_time
         else:
             return None
 
