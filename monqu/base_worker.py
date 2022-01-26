@@ -19,7 +19,6 @@ class BaseWorker:
         self._local_queue = []
         self.prefetch = prefetch
 
-    # change back to start_time as arg vs in dict
     def call_func(self, func: dict):
         try:
             if func.get("args") and func.get("kwargs"):
