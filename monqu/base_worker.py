@@ -94,6 +94,21 @@ class BaseWorker:
         else:
             return None
 
+    # Rename
+    def _start_funcs(self, cursor, session) -> list[dict] | None:
+        start_time = datetime.now()
+        funcs = [dict(func, start_time=start_time) for func in cursor]
+
+        if funcs:
+            self.col.update_many(
+                {"_id": {"$in": [func.get("_id") for func in funcs]}},
+                {"$set": {"status": "running", "start_time": start_time}},
+                session=session,
+            )
+            return funcs
+        else:
+            return None
+
     # Check if type hinting is correct
     def bulk_fifo(self) -> list[dict] | None:
         with self.client.start_session() as session:
@@ -104,18 +119,7 @@ class BaseWorker:
                     session=session,
                 ).limit(self.prefetch)
 
-                start_time = datetime.now()
-                funcs = [dict(func, start_time=start_time) for func in cursor]
-
-                if funcs:
-                    self.col.update_many(
-                        {"_id": {"$in": [func.get("_id") for func in funcs]}},
-                        {"$set": {"status": "running", "start_time": start_time}},
-                        session=session,
-                    )
-                    return funcs
-                else:
-                    return None
+                return self._start_funcs(cursor=cursor, session=session)
 
     def _random_id(self) -> str | None:
         # Optimize to get func instead aggregate
@@ -163,18 +167,7 @@ class BaseWorker:
                     session=session,
                 )
 
-                start_time = datetime.now()
-                funcs = [dict(func, start_time=start_time) for func in cursor]
-
-                if funcs:
-                    self.col.update_many(
-                        {"_id": {"$in": [func.get("_id") for func in funcs]}},
-                        {"$set": {"status": "running", "start_time": start_time}},
-                        session=session,
-                    )
-                    return funcs
-                else:
-                    return None
+                return self._start_funcs(cursor=cursor, session=session)
 
     def by_id(self, mongo_id: str) -> dict | None:
         start_time = datetime.now()
