@@ -41,7 +41,7 @@ class BaseWorker:
                         "status": "completed",
                         "start_time": func.get("start_time"),
                         "end_time": datetime.now(),
-                        # Check if returned is None so NoneType is not converted to binary
+                        # Checks if returned is None so NoneType is not converted to binary
                         "returned": Binary(dumps(returned)) if returned else None,
                     },
                 )
@@ -52,7 +52,7 @@ class BaseWorker:
                         "status": "completed",
                         "start_time": func.get("start_time"),
                         "end_time": datetime.now(),
-                        # Check if returned is None so NoneType is not converted to binary
+                        # Checks if returned is None so NoneType is not converted to binary
                         "returned": Binary(dumps(returned)) if returned else None,
                     },
                 )
