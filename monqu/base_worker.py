@@ -1,5 +1,5 @@
 from cloudpickle.cloudpickle_fast import loads, dumps
-from pymongo import MongoClient
+from pymongo import MongoClient, ReplaceOne
 from pymongo.errors import PyMongoError
 from bson import Binary, ObjectId
 from datetime import datetime
@@ -34,6 +34,52 @@ class BaseWorker:
             # maybe not include returned change to if returned:
             # if returned is not None:
             self.col.find_one_and_replace(
+                {"_id": ObjectId(func.get("_id"))},
+                {
+                    "status": "completed",
+                    "start_time": func.get("start_time"),
+                    "end_time": datetime.now(),
+                    "returned": Binary(dumps(returned)) if returned else None,
+                },
+            )
+
+        except Exception as exc:
+            # Make sure retries can't be below zero
+            if func.get("retries") == 0:
+                self.col.find_one_and_update(
+                    # see if Object id is needed
+                    {"_id": ObjectId(func.get("_id"))},
+                    {"$set": {"status": "failed", "error": repr(exc)}},
+                )
+            else:
+                self.col.find_one_and_update(
+                    {"_id": ObjectId(func.get("_id"))},
+                    {
+                        "$set": {"status": "retry", "error": repr(exc)},
+                        "$inc": {"retries": -1},
+                    },
+                )
+
+    def run_bulk_call_func(self, funcs: list[dict]):
+        return_payload = [self.bulk_call_func(func) for func in funcs]
+        self.col.bulk_write(return_payload)
+
+    def bulk_call_func(self, func: dict) -> ReplaceOne | None:
+        try:
+            if func.get("args") and func.get("kwargs"):
+                returned = loads(func.get("func"))(
+                    *loads(func.get("args")), **loads(func.get("kwargs"))
+                )
+            elif func.get("args"):
+                returned = loads(func.get("func"))(*loads(func.get("args")))
+            elif func.get("kwargs"):
+                returned = loads(func.get("func"))(**loads(func.get("kwargs")))
+            else:
+                returned = loads(func.get("func"))()
+            # maybe not include returned change to if returned:
+            # if returned is not None:
+
+            return ReplaceOne(
                 {"_id": ObjectId(func.get("_id"))},
                 {
                     "status": "completed",
