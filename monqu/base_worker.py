@@ -106,6 +106,7 @@ class BaseWorker:
             self.col.aggregate(
                 [
                     {"$match": {"status": {"$in": [None, "retry"]}}},
+                    # Change to prefetch amount?
                     {"$sample": {"size": 1}},
                 ]
             )
@@ -130,6 +131,32 @@ class BaseWorker:
             return func
         else:
             return None
+
+    def bulk_random(self):
+        with self.client.start_session() as session:
+            with session.start_transaction():
+
+                cursor = self.col.aggregate(
+                    [
+                        {"$match": {"status": {"$in": [None, "retry"]}}},
+                        # priority for random? sort=[("priority", -1), ("_id", 1)],
+                        {"$sample": {"size": self.prefetch}},
+                    ],
+                    session=session,
+                )
+
+                start_time = datetime.now()
+                funcs = [dict(func, start_time=start_time) for func in cursor]
+
+                if funcs:
+                    self.col.update_many(
+                        {"_id": {"$in": [func.get("_id") for func in funcs]}},
+                        {"$set": {"status": "running", "start_time": start_time}},
+                        session=session,
+                    )
+                    return funcs
+                else:
+                    return None
 
     def by_id(self, mongo_id: str) -> dict | None:
         start_time = datetime.now()
