@@ -21,7 +21,7 @@ class BaseWorker:
         self.prefetch = prefetch
 
     # change back to start_time as arg vs in dict
-    def call_func(self, func: dict, start_time: datetime):
+    def call_func(self, func: dict):
         try:
             if func.get("args") and func.get("kwargs"):
                 returned = loads(func.get("func"))(
@@ -39,14 +39,14 @@ class BaseWorker:
                 {"_id": ObjectId(func.get("_id"))},
                 {
                     "status": "completed",
-                    "start_time": start_time,
+                    "start_time": func.get("start_time"),
                     "end_time": datetime.now(),
                     "returned": Binary(dumps(returned)) if returned else None,
                 },
             )
 
         except Exception as exc:
-            # Check if it needs to be == pr <=
+            # Make sure retries can't be below zero
             if func.get("retries") == 0:
                 self.col.find_one_and_update(
                     # see if Object id is needed
@@ -72,7 +72,8 @@ class BaseWorker:
         )
 
         if func:
-            return func, start_time
+            func["start_time"] = start_time
+            return func
         else:
             return None
 
@@ -94,7 +95,8 @@ class BaseWorker:
                         {"$set": {"status": "running", "start_time": start_time}},
                         session=session,
                     )
-                    return funcs, start_time
+                    # add start_time
+                    return funcs
                 else:
                     return None
 
@@ -125,7 +127,8 @@ class BaseWorker:
         )
 
         if func:
-            return func, start_time
+            func["start_time"] = start_time
+            return func
         else:
             return None
 
@@ -138,7 +141,8 @@ class BaseWorker:
 
         # Change this to return error or something
         if func:
-            return func, start_time
+            func["start_time"] = start_time
+            return func
         else:
             return None
 
