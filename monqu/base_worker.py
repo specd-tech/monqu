@@ -77,7 +77,7 @@ class BaseWorker:
             return None
 
     # Check if type hinting is correct
-    def trans_fifo(self) -> list[dict] | None:
+    def bulk_fifo(self) -> list[dict] | None:
         with self.client.start_session() as session:
             with session.start_transaction():
                 cursor = self.col.find(
@@ -86,16 +86,15 @@ class BaseWorker:
                     session=session,
                 ).limit(self.prefetch)
 
-                funcs = [func for func in cursor]
+                start_time = datetime.now()
+                funcs = [dict(func, start_time=start_time) for func in cursor]
 
                 if funcs:
-                    start_time = datetime.now()
                     self.col.update_many(
                         {"_id": {"$in": [func.get("_id") for func in funcs]}},
                         {"$set": {"status": "running", "start_time": start_time}},
                         session=session,
                     )
-                    # add start_time
                     return funcs
                 else:
                     return None
