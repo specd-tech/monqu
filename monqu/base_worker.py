@@ -19,7 +19,7 @@ class BaseWorker:
         self._local_queue = []
         self.prefetch = prefetch
 
-    def call_func(self, func: dict):
+    def call_func(self, func: dict, bulk: bool = False) -> ReplaceOne | None:
         try:
             if func.get("args") and func.get("kwargs"):
                 returned = loads(func.get("func"))(
@@ -33,15 +33,27 @@ class BaseWorker:
                 returned = loads(func.get("func"))()
             # maybe not include returned change to if returned:
             # if returned is not None:
-            self.col.find_one_and_replace(
-                {"_id": ObjectId(func.get("_id"))},
-                {
-                    "status": "completed",
-                    "start_time": func.get("start_time"),
-                    "end_time": datetime.now(),
-                    "returned": Binary(dumps(returned)) if returned else None,
-                },
-            )
+            # Does it need to be find_one_and_replace
+            if bulk is False:
+                self.col.find_one_and_replace(
+                    {"_id": ObjectId(func.get("_id"))},
+                    {
+                        "status": "completed",
+                        "start_time": func.get("start_time"),
+                        "end_time": datetime.now(),
+                        "returned": Binary(dumps(returned)) if returned else None,
+                    },
+                )
+            if bulk is True:
+                return ReplaceOne(
+                    {"_id": ObjectId(func.get("_id"))},
+                    {
+                        "status": "completed",
+                        "start_time": func.get("start_time"),
+                        "end_time": datetime.now(),
+                        "returned": Binary(dumps(returned)) if returned else None,
+                    },
+                )
 
         except Exception as exc:
             # Make sure retries can't be below zero
@@ -60,51 +72,10 @@ class BaseWorker:
                     },
                 )
 
-    def run_bulk_call_func(self, funcs: list[dict]):
-        return_payload = [self.bulk_call_func(func) for func in funcs]
+    # remove bulk and keep it funcs vs func
+    def bulk_call_funcs(self, funcs: list[dict]):
+        return_payload = [self.call_func(func, bulk=True) for func in funcs]
         self.col.bulk_write(return_payload)
-
-    def bulk_call_func(self, func: dict) -> ReplaceOne | None:
-        try:
-            if func.get("args") and func.get("kwargs"):
-                returned = loads(func.get("func"))(
-                    *loads(func.get("args")), **loads(func.get("kwargs"))
-                )
-            elif func.get("args"):
-                returned = loads(func.get("func"))(*loads(func.get("args")))
-            elif func.get("kwargs"):
-                returned = loads(func.get("func"))(**loads(func.get("kwargs")))
-            else:
-                returned = loads(func.get("func"))()
-            # maybe not include returned change to if returned:
-            # if returned is not None:
-
-            return ReplaceOne(
-                {"_id": ObjectId(func.get("_id"))},
-                {
-                    "status": "completed",
-                    "start_time": func.get("start_time"),
-                    "end_time": datetime.now(),
-                    "returned": Binary(dumps(returned)) if returned else None,
-                },
-            )
-
-        except Exception as exc:
-            # Make sure retries can't be below zero
-            if func.get("retries") == 0:
-                self.col.find_one_and_update(
-                    # see if Object id is needed
-                    {"_id": ObjectId(func.get("_id"))},
-                    {"$set": {"status": "failed", "error": repr(exc)}},
-                )
-            else:
-                self.col.find_one_and_update(
-                    {"_id": ObjectId(func.get("_id"))},
-                    {
-                        "$set": {"status": "retry", "error": repr(exc)},
-                        "$inc": {"retries": -1},
-                    },
-                )
 
     def fifo(self) -> dict | None:
         start_time = datetime.now()
