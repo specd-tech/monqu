@@ -20,6 +20,15 @@ class BaseWorker:
         self.prefetch = prefetch
 
     def call_func(self, func: dict, bulk: bool = False) -> ReplaceOne | None:
+        """
+
+        Args:
+            func:
+            bulk:
+
+        Returns:
+
+        """
         try:
             if func.get("args") and func.get("kwargs"):
                 returned = loads(func.get("func"))(
@@ -76,10 +85,23 @@ class BaseWorker:
 
     # remove bulk and keep it funcs vs func
     def bulk_call_funcs(self, funcs: list[dict]):
+        """
+
+        Args:
+            funcs:
+
+        Returns:
+
+        """
         return_payload = [self.call_func(func, bulk=True) for func in funcs]
         self.col.bulk_write(return_payload)
 
     def fifo(self) -> dict | None:
+        """
+
+        Returns:
+
+        """
         start_time = datetime.now()
 
         func = self.col.find_one_and_update(
@@ -96,6 +118,15 @@ class BaseWorker:
 
     # Rename
     def _start_funcs(self, cursor, session) -> list[dict] | None:
+        """
+
+        Args:
+            cursor:
+            session:
+
+        Returns:
+
+        """
         start_time = datetime.now()
         funcs = [dict(func, start_time=start_time) for func in cursor]
 
@@ -109,8 +140,12 @@ class BaseWorker:
         else:
             return None
 
-    # Check if type hinting is correct
     def bulk_fifo(self) -> list[dict] | None:
+        """
+
+        Returns:
+
+        """
         with self.client.start_session() as session:
             with session.start_transaction():
                 cursor = self.col.find(
@@ -155,6 +190,11 @@ class BaseWorker:
             return None
 
     def bulk_random(self):
+        """
+
+        Returns:
+
+        """
         with self.client.start_session() as session:
             with session.start_transaction():
 
@@ -169,7 +209,16 @@ class BaseWorker:
 
                 return self._start_funcs(cursor=cursor, session=session)
 
+    # change to call func if exist else return None
     def by_id(self, mongo_id: str) -> dict | None:
+        """
+
+        Args:
+            mongo_id:
+
+        Returns:
+
+        """
         start_time = datetime.now()
         # Check staus to see if it has been complted maybe make this for failed tasks
         func = self.col.find_one_and_update(
@@ -184,6 +233,11 @@ class BaseWorker:
             return None
 
     def watch(self):
+        """
+
+        Returns:
+
+        """
         try:
             with self.col.watch(
                 [{"$match": {"status": {"$in": [None, "retry"]}}}], batch_size=1
