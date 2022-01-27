@@ -20,13 +20,15 @@ class BaseWorker:
         self.prefetch = prefetch
 
     def call_func(self, func: dict, bulk: bool = False) -> ReplaceOne | None:
-        """
+        """Unpacks and calls serialized function.
 
         Args:
-            func:
-            bulk:
+            func: Dictionary containing a serialized function and auxiliary/additional information.
+            bulk: Boolean that controls how the called function's result is handled.
 
         Returns:
+            If bulk is False there is no return value. If bulk is True the called function's result is serialized and
+            returned.
 
         """
         try:
@@ -85,21 +87,24 @@ class BaseWorker:
 
     # remove bulk and keep it funcs vs func
     def bulk_call_funcs(self, funcs: list[dict]):
-        """
+        """Calls multiple functions and inserts the results to the queue.
+
+        Passes funcs to call_func with bulk flag set to true so the functions' results are returned. The returned
+        dictionaries are then inserted to the queue using MongoDB's bulk_write.
 
         Args:
-            funcs:
-
-        Returns:
+            funcs: List of dictionaries contain serialized functions.
 
         """
         return_payload = [self.call_func(func, bulk=True) for func in funcs]
         self.col.bulk_write(return_payload)
 
     def fifo(self) -> dict | None:
-        """
+        """Finds and returns the first/oldest and highest priority task in the queue.
 
         Returns:
+            Dictionary with serialized function if there is any uncompleted tasks in the queue. If there are no tasks
+            then None is returned.
 
         """
         start_time = datetime.now()
@@ -233,9 +238,7 @@ class BaseWorker:
             return None
 
     def watch(self):
-        """
-
-        Returns:
+        """Blocks until there is a new task add to the queue.
 
         """
         try:
