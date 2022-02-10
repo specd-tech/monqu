@@ -8,6 +8,9 @@ from collections import defaultdict
 """
 TODO:
 Check if value error shows properly in different functions
+test bulk_insert with auto_insert for performance loss
+add module check for gevent
+add lifo
 """
 
 

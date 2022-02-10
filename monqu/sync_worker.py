@@ -15,7 +15,7 @@ class SyncWorker(BaseWorker):
             mongo_connection=mongo_connection,
             database=database,
             queue=queue,
-            prefetch=1 + prefetch,
+            prefetch=prefetch + 1,
         )
 
     # Make type hint for fifo, random, and stack

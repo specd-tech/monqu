@@ -22,7 +22,7 @@ class ThreadWorker(BaseWorker):
             mongo_connection=mongo_connection,
             database=database,
             queue=queue,
-            prefetch=self.threads + prefetch,
+            prefetch=prefetch + self.threads,
         )
 
     def worker(self, order: str = "fifo"):

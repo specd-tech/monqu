@@ -14,7 +14,12 @@ class ProcessWorker(BaseWorker):
         processes: int = cpu_count() if cpu_count() else 2,
         prefetch: int = 0,
     ):
-        super().__init__(mongo_connection, database, queue)
+        super().__init__(
+            mongo_connection=mongo_connection,
+            database=database,
+            queue=queue,
+            prefetch=prefetch + 1,
+        )
         if processes <= 0:
             raise ValueError("processes must be greater than 0")
         self.processes = processes

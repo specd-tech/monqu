@@ -26,7 +26,7 @@ class GeventWorker(BaseWorker):
             mongo_connection=mongo_connection,
             database=database,
             queue=queue,
-            prefetch=greenlet_threads + prefetch,
+            prefetch=prefetch + greenlet_threads,
         )
         # Rename task_pool and _task_pool
         self.task_pool = Pool(greenlet_threads)
