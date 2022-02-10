@@ -14,12 +14,21 @@ Check if value error shows properly in different functions
 # flip ret and proiety
 class MonquServer:
     def __init__(
-        self, mongo_connection: str, database: str = "monqu", queue: str = "queue"
+        self,
+        mongo_connection: str,
+        database: str = "monqu",
+        queue: str = "queue",
+        auto_insert: int = None,
     ):
         self.client = MongoClient(mongo_connection)
         self.database = self.client[database]
         self.col = self.database[queue]
         self.queue = queue
+        if auto_insert is not None and auto_insert <= 1:
+            raise ValueError("auto_insert must be greater then 1")
+        else:
+            self.auto_insert = auto_insert
+            self.bulk_count = 1
         self._bulk_queue = defaultdict(list)
 
     @staticmethod
@@ -73,17 +82,25 @@ class MonquServer:
         retries: int = 0,
     ):
         if func is not None and not callable(func):
-            # Correct wording
             raise TypeError("func must be callable")
         queue = queue if queue else self.queue
         self._bulk_queue[queue] += [
             self._payload(func, args, kwargs, priority, retries)
         ]
 
+        if self.auto_insert is None:
+            pass
+        elif self.bulk_count == self.auto_insert:
+            self.bulk_insert()
+            self.bulk_count = 1
+        else:
+            self.bulk_count += 1
+
     def bulk_insert(self):
-        # Change terms?
         for queue, tasks in self._bulk_queue.items():
             self.database[queue].insert_many(tasks)
+        # Check that clear is neccesary
+        self._bulk_queue.clear()
 
     def task(
         self,
