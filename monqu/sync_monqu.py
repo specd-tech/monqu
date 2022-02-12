@@ -10,7 +10,7 @@ TODO:
 Check if value error shows properly in different functions
 test bulk_insert with auto_insert for performance loss
 add module check for gevent
-add lifo
+Check error conventions
 """
 
 
@@ -72,6 +72,7 @@ class MonquServer:
         if func is not None and not callable(func):
             # Correct wording
             raise TypeError("func must be callable")
+
         queue = queue if queue else self.col
         queue.insert_one(self._payload(func, args, kwargs, priority, retries))
 
@@ -86,6 +87,7 @@ class MonquServer:
     ):
         if func is not None and not callable(func):
             raise TypeError("func must be callable")
+
         queue = queue if queue else self.queue
         self._bulk_queue[queue] += [
             self._payload(func, args, kwargs, priority, retries)
@@ -102,7 +104,7 @@ class MonquServer:
     def bulk_insert(self):
         for queue, tasks in self._bulk_queue.items():
             self.database[queue].insert_many(tasks)
-        # Check that clear is neccesary
+
         self._bulk_queue.clear()
 
     def task(
