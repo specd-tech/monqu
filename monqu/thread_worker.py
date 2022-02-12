@@ -12,7 +12,7 @@ class ThreadWorker(BaseWorker):
         threads: int = (cpu_count() or 2) + 4,
         prefetch: int = 0,
     ):
-        if threads <= 0:
+        if threads < 1:
             raise ValueError("threads must be greater than 0")
         self.threads = threads
 
@@ -27,9 +27,22 @@ class ThreadWorker(BaseWorker):
 
     def worker(self, order: str = "fifo"):
         # add timer
-        # add patterning matching
         # Add pause logic
-        get_func = self.fifo
+        if order == "fifo" and self._is_replica_set:
+            get_func = self.bulk_fifo
+            call = self.bulk_call_funcs
+        elif order == "fifo" and not self._is_replica_set:
+            get_func = self.fifo
+            call = self.call_func
+        elif order == "random" and self._is_replica_set:
+            get_func = self.bulk_random
+            call = self.bulk_call_funcs
+        elif order == "random" and not self._is_replica_set:
+            get_func = self.random
+            call = self.call_func
+        else:
+            raise ValueError("order is not a correct value")
+
         while True:
             for _ in range(self.prefetch - len(self._local_queue)):
                 if func := get_func():
@@ -42,4 +55,4 @@ class ThreadWorker(BaseWorker):
                     break
 
             with ThreadPoolExecutor(max_workers=self.threads) as executor:
-                executor.map(self.call_func, self._local_queue)
+                executor.map(call, self._local_queue)

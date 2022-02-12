@@ -20,17 +20,24 @@ class SyncWorker(BaseWorker):
 
     # Make type hint for fifo, random, and stack
     def worker(self, order: str = "fifo"):
-        # match order:
-        #     case "fifo":
-        #         get_func = self.fifo
-        #     case 404:
-        #         return "Not found"
-        #     case _:
-        #         raise ValueError("order is not a correct value")
-        get_func = self.fifo
+        if order == "fifo" and self._is_replica_set:
+            get_func = self.bulk_fifo
+            call = self.bulk_call_funcs
+        elif order == "fifo" and not self._is_replica_set:
+            get_func = self.fifo
+            call = self.call_func
+        elif order == "random" and self._is_replica_set:
+            get_func = self.bulk_random
+            call = self.bulk_call_funcs
+        elif order == "random" and not self._is_replica_set:
+            get_func = self.random
+            call = self.call_func
+        else:
+            raise ValueError("order is not a correct value")
+
         while True:
-            if func := get_func():
-                self.call_func(func)
+            if funcs := get_func():
+                call(funcs)
 
             else:
                 self.watch()

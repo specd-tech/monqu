@@ -14,6 +14,10 @@ class BaseWorker:
         prefetch: int = 0,
     ):
         self.client = MongoClient(mongo_connection)
+        if self.client.topology_description.topology_type:
+            self._is_replica_set = True
+        else:
+            self._is_replica_set = False
         # multiqueue
         self.col = self.client[database][queue]
         self._local_queue = []
@@ -74,13 +78,13 @@ class BaseWorker:
                 self.col.find_one_and_update(
                     # see if Object id is needed
                     {"_id": ObjectId(func.get("_id"))},
-                    {"$set": {"status": "failed", "error": repr(exc)}},
+                    {"$set": {"status": "failed", "exception": repr(exc)}},
                 )
             else:
                 self.col.find_one_and_update(
                     {"_id": ObjectId(func.get("_id"))},
                     {
-                        "$set": {"status": "retry", "error": repr(exc)},
+                        "$set": {"status": "retry", "exception": repr(exc)},
                         "$inc": {"retries": -1},
                     },
                 )
@@ -122,12 +126,12 @@ class BaseWorker:
             return None
 
     # Rename
-    def _start_funcs(self, cursor, session) -> list[dict] | None:
+    def _set_up_funcs(self, cursor, session) -> list[dict] | None:
         """
 
         Args:
-            cursor:
-            session:
+            cursor: MongoDB cursor
+            session: MongoDB session
 
         Returns:
 
@@ -159,10 +163,9 @@ class BaseWorker:
                     session=session,
                 ).limit(self.prefetch)
 
-                return self._start_funcs(cursor=cursor, session=session)
+                return self._set_up_funcs(cursor=cursor, session=session)
 
     def _random_id(self) -> str | None:
-        # Optimize to get func instead aggregate
         # add way to use proities with sample
         sample = list(
             self.col.aggregate(
@@ -194,7 +197,7 @@ class BaseWorker:
         else:
             return None
 
-    def bulk_random(self):
+    def bulk_random(self) -> list[dict] | None:
         """
 
         Returns:
@@ -212,7 +215,7 @@ class BaseWorker:
                     session=session,
                 )
 
-                return self._start_funcs(cursor=cursor, session=session)
+                return self._set_up_funcs(cursor=cursor, session=session)
 
     # change to call func if exist else return None
     def by_id(self, mongo_id: str) -> dict | None:
