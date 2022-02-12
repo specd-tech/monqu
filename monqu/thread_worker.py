@@ -25,23 +25,37 @@ class ThreadWorker(BaseWorker):
             prefetch=prefetch + self.threads,
         )
 
-    def worker(self, order: str = "fifo"):
-        # add timer
-        # Add pause logic
-        if order == "fifo" and self._is_replica_set:
+    # test local queue and watch
+    def _bulk_worker(self, order: str):
+        if order == "fifo":
             get_func = self.bulk_fifo
-            call = self.bulk_call_funcs
-        elif order == "fifo" and not self._is_replica_set:
-            get_func = self.fifo
-            call = self.call_func
-        elif order == "random" and self._is_replica_set:
-            get_func = self.bulk_random
-            call = self.bulk_call_funcs
-        elif order == "random" and not self._is_replica_set:
-            get_func = self.random
-            call = self.call_func
+        elif order == "lifo":
+            get_func = self.bulk_lifo
         else:
-            raise ValueError("order is not a correct value")
+            get_func = self.bulk_random
+
+        while True:
+            if func := get_func():
+                self._local_queue.append(func)
+
+            elif func is None and self._local_queue == []:
+                self.watch()
+
+            else:
+                with ThreadPoolExecutor(max_workers=self.threads) as executor:
+                    executor.map(self.bulk_call_funcs, self._local_queue)
+
+    # see if range(self.prefetch - len(self._local_queue) or break is needed with map, and if on async if fill local
+    # queue while working
+    def _single_worker(self, order: str):
+        # add timer for func timeout while running
+        # Add pause logic
+        if order == "fifo":
+            get_func = self.bulk_fifo
+        elif order == "lifo":
+            get_func = self.bulk_lifo
+        else:
+            get_func = self.bulk_random
 
         while True:
             for _ in range(self.prefetch - len(self._local_queue)):
@@ -55,4 +69,16 @@ class ThreadWorker(BaseWorker):
                     break
 
             with ThreadPoolExecutor(max_workers=self.threads) as executor:
-                executor.map(call, self._local_queue)
+                executor.map(self.call_func, self._local_queue)
+
+    # name equal host name or increment 1 from worker collection
+    def manager(self, name: str, order: str = "fifo"):
+        if order not in ["fifo", "lifo", "random"]:
+            raise ValueError("order is not a correct value")
+
+        if self._is_replica_set:
+            run = self._bulk_worker
+        else:
+            run = self._single_worker
+
+        run(order)

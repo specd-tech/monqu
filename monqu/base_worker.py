@@ -5,6 +5,7 @@ from bson import Binary, ObjectId
 from datetime import datetime
 
 
+# when finished make all vars private
 class BaseWorker:
     def __init__(
         self,
@@ -22,6 +23,8 @@ class BaseWorker:
         self.col = self.client[database][queue]
         self._local_queue = []
         self.prefetch = prefetch
+        self._pause = False
+        self._shutdown = False
 
     def call_func(self, func: dict, bulk: bool = False) -> ReplaceOne | None:
         """Unpacks and calls serialized function.
@@ -103,28 +106,6 @@ class BaseWorker:
         return_payload = [self.call_func(func, bulk=True) for func in funcs]
         self.col.bulk_write(return_payload)
 
-    def fifo(self) -> dict | None:
-        """Finds and returns the first/oldest and highest priority task in the queue.
-
-        Returns:
-            Dictionary with serialized function if there is any uncompleted tasks in the queue. If there are no tasks
-            then None is returned.
-
-        """
-        start_time = datetime.now()
-
-        func = self.col.find_one_and_update(
-            {"status": {"$in": [None, "retry"]}},
-            {"$set": {"status": "running", "start_time": start_time}},
-            sort=[("priority", -1), ("_id", 1)],
-        )
-
-        if func:
-            func["start_time"] = start_time
-            return func
-        else:
-            return None
-
     # Rename
     def _set_up_funcs(self, cursor, session) -> list[dict] | None:
         """
@@ -165,6 +146,90 @@ class BaseWorker:
 
                 return self._set_up_funcs(cursor=cursor, session=session)
 
+    def bulk_lifo(self) -> list[dict] | None:
+        """
+
+        Returns:
+
+        """
+        with self.client.start_session() as session:
+            with session.start_transaction():
+                cursor = self.col.find(
+                    {"status": {"$in": [None, "retry"]}},
+                    sort=[("priority", -1), ("_id", -1)],
+                    session=session,
+                ).limit(self.prefetch)
+
+                return self._set_up_funcs(cursor=cursor, session=session)
+
+    def bulk_random(self) -> list[dict] | None:
+        """
+
+        Returns:
+
+        """
+        with self.client.start_session() as session:
+            with session.start_transaction():
+
+                cursor = self.col.aggregate(
+                    [
+                        {"$match": {"status": {"$in": [None, "retry"]}}},
+                        # priority for random? sort=[("priority", -1), ("_id", 1)],
+                        {"$sample": {"size": self.prefetch}},
+                    ],
+                    session=session,
+                )
+
+                return self._set_up_funcs(cursor=cursor, session=session)
+
+    def fifo(self) -> dict | None:
+        """First in first out
+
+        Finds and returns the first/oldest and highest priority task in the queue.
+
+        Returns:
+            Dictionary with serialized function if there is any uncompleted tasks in the queue. If there are no tasks
+            then None is returned.
+
+        """
+        start_time = datetime.now()
+
+        func = self.col.find_one_and_update(
+            {"status": {"$in": [None, "retry"]}},
+            {"$set": {"status": "running", "start_time": start_time}},
+            sort=[("priority", -1), ("_id", 1)],
+        )
+
+        if func:
+            func["start_time"] = start_time
+            return func
+        else:
+            return None
+
+    def lifo(self) -> dict | None:
+        """Last in first out
+
+        Finds and returns the last/newest and highest priority task in the queue.
+
+        Returns:
+            Dictionary with serialized function if there is any uncompleted tasks in the queue. If there are no tasks
+            then None is returned.
+
+        """
+        start_time = datetime.now()
+
+        func = self.col.find_one_and_update(
+            {"status": {"$in": [None, "retry"]}},
+            {"$set": {"status": "running", "start_time": start_time}},
+            sort=[("priority", -1), ("_id", -1)],
+        )
+
+        if func:
+            func["start_time"] = start_time
+            return func
+        else:
+            return None
+
     def _random_id(self) -> str | None:
         # add way to use proities with sample
         sample = list(
@@ -197,26 +262,6 @@ class BaseWorker:
         else:
             return None
 
-    def bulk_random(self) -> list[dict] | None:
-        """
-
-        Returns:
-
-        """
-        with self.client.start_session() as session:
-            with session.start_transaction():
-
-                cursor = self.col.aggregate(
-                    [
-                        {"$match": {"status": {"$in": [None, "retry"]}}},
-                        # priority for random? sort=[("priority", -1), ("_id", 1)],
-                        {"$sample": {"size": self.prefetch}},
-                    ],
-                    session=session,
-                )
-
-                return self._set_up_funcs(cursor=cursor, session=session)
-
     # change to call func if exist else return None
     def by_id(self, mongo_id: str) -> dict | None:
         """
@@ -241,9 +286,7 @@ class BaseWorker:
             return None
 
     def watch(self):
-        """Blocks until there is a new task add to the queue.
-
-        """
+        """Blocks until there is a new task add to the queue."""
         try:
             with self.col.watch(
                 [{"$match": {"status": {"$in": [None, "retry"]}}}], batch_size=1
