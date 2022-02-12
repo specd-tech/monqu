@@ -25,7 +25,6 @@ class ThreadWorker(BaseWorker):
             prefetch=prefetch + self.threads,
         )
 
-    # test local queue and watch
     def _bulk_worker(self, order: str):
         if order == "fifo":
             get_func = self.bulk_fifo
@@ -35,15 +34,17 @@ class ThreadWorker(BaseWorker):
             get_func = self.bulk_random
 
         while True:
-            if func := get_func():
-                self._local_queue.append(func)
+            if funcs := get_func():
+                self._local_queue.extend(funcs)
 
-            elif func is None and self._local_queue == []:
+            # elif funcs is None and self._local_queue == []:
+            else:
                 self.watch()
 
-            else:
-                with ThreadPoolExecutor(max_workers=self.threads) as executor:
-                    executor.map(self.bulk_call_funcs, self._local_queue)
+            with ThreadPoolExecutor(max_workers=self.threads) as executor:
+                executor.map(self.call_func, self._local_queue)
+
+            self._local_queue.clear()
 
     # see if range(self.prefetch - len(self._local_queue) or break is needed with map, and if on async if fill local
     # queue while working
@@ -70,6 +71,8 @@ class ThreadWorker(BaseWorker):
 
             with ThreadPoolExecutor(max_workers=self.threads) as executor:
                 executor.map(self.call_func, self._local_queue)
+
+            self._local_queue.clear()
 
     # name equal host name or increment 1 from worker collection
     def manager(self, name: str, order: str = "fifo"):
