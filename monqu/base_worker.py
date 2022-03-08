@@ -3,10 +3,11 @@ from pymongo import MongoClient, ReplaceOne
 from pymongo.errors import PyMongoError
 from bson import Binary, ObjectId
 from datetime import datetime
+from abc import ABC
 
 
 # when finished make all vars private
-class BaseWorker:
+class BaseWorker(ABC):
     def __init__(
         self,
         mongo_connection: str,
@@ -52,6 +53,7 @@ class BaseWorker:
             # maybe not include returned change to if returned:
             # if returned is not None:
             # Does it need to be find_one_and_replace
+            # ObjectId(func.get("_id"))}?
             if bulk is False:
                 self.col.find_one_and_replace(
                     {"_id": ObjectId(func.get("_id"))},
