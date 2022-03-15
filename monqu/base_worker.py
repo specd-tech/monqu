@@ -56,7 +56,6 @@ class BaseWorker(ABC):
             else:
                 returned = loads(func.get("func"))()
             # Does it need to be find_one_and_replace
-            # ObjectId(func.get("_id"))}?
 
             # ? Prepares return dict
             _id = {"_id": ObjectId(func.get("_id"))}
@@ -70,20 +69,20 @@ class BaseWorker(ABC):
                 return_func["returned"] = Binary(dumps(returned))
 
             if bulk is False:
-                self.col.find_one_and_replace(_id, return_func)
+                self.col.replace_one(_id, return_func)
             if bulk is True:
                 return ReplaceOne(_id, return_func)
 
         except Exception as exc:
             # Make sure retries can't be below zero
             if func.get("retries") == 0:
-                self.col.find_one_and_update(
+                self.col.update_one(
                     # see if Object id is needed
                     {"_id": ObjectId(func.get("_id"))},
                     {"$set": {"status": "failed", "exception": repr(exc)}},
                 )
             else:
-                self.col.find_one_and_update(
+                self.col.update_one(
                     {"_id": ObjectId(func.get("_id"))},
                     {
                         "$set": {"status": "retry", "exception": repr(exc)},
