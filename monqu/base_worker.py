@@ -54,28 +54,22 @@ class BaseWorker(ABC):
             # if returned is not None:
             # Does it need to be find_one_and_replace
             # ObjectId(func.get("_id"))}?
+
+            # ? Prepares return dict
+            _id = {"_id": ObjectId(func.get("_id"))}
+            return_func = {
+                "status": "completed",
+                "start_time": func.get("start_time"),
+                "end_time": datetime.now(),
+            }
+            # If the function returned any value, this serializes it and adds it to the return payload
+            if returned is not None:
+                return_func["returned"] = Binary(dumps(returned))
+
             if bulk is False:
-                self.col.find_one_and_replace(
-                    {"_id": ObjectId(func.get("_id"))},
-                    {
-                        "status": "completed",
-                        "start_time": func.get("start_time"),
-                        "end_time": datetime.now(),
-                        # Checks if returned is None so NoneType is not converted to binary
-                        "returned": Binary(dumps(returned)) if returned else None,
-                    },
-                )
+                self.col.find_one_and_replace(_id, return_func)
             if bulk is True:
-                return ReplaceOne(
-                    {"_id": ObjectId(func.get("_id"))},
-                    {
-                        "status": "completed",
-                        "start_time": func.get("start_time"),
-                        "end_time": datetime.now(),
-                        # Checks if returned is None so NoneType is not converted to binary
-                        "returned": Binary(dumps(returned)) if returned else None,
-                    },
-                )
+                return ReplaceOne(_id, return_func)
 
         except Exception as exc:
             # Make sure retries can't be below zero
