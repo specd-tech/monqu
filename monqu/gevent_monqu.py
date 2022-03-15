@@ -36,10 +36,14 @@ class MonquServer:
         priority: int,
         retries: int,
     ) -> dict:
+        if func is not None and not callable(func):
+            # Correct wording
+            raise TypeError("func must be callable")
         if retries < 0:
             raise ValueError("retries must be greater than or equal to 0")
         if priority < 0:
             raise ValueError("priority must be greater than or equal to 0")
+
         payload = {
             "status": None,
             "priority": priority,
@@ -63,9 +67,6 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not None and not callable(func):
-            # Correct wording
-            raise TypeError("func must be callable")
         queue = queue if queue else self.col
         self._tasks.append(
             gevent.spawn(
@@ -82,9 +83,6 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not None and not callable(func):
-            # Correct wording
-            raise TypeError("func must be callable")
         queue = queue if queue else self.queue
         self._bulk_queue[queue] += [
             self._payload(func, args, kwargs, priority, retries)
