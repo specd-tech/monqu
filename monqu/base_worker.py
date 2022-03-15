@@ -77,7 +77,6 @@ class BaseWorker(ABC):
             # Make sure retries can't be below zero
             if func.get("retries") == 0:
                 self.col.update_one(
-                    # see if Object id is needed
                     {"_id": ObjectId(func.get("_id"))},
                     {"$set": {"status": "failed", "exception": repr(exc)}},
                 )

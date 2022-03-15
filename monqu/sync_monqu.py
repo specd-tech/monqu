@@ -11,6 +11,7 @@ Check if value error shows properly in different functions
 test bulk_insert with auto_insert for performance loss
 add module check for gevent
 Check error conventions
+make sure kwargs is convert to dict before payload
 """
 
 
@@ -42,10 +43,14 @@ class MonquServer:
         priority: int,
         retries: int,
     ) -> dict:
+        if func is not None and not callable(func):
+            # Correct wording
+            raise TypeError("func must be callable")
         if retries < 0:
             raise ValueError("retries must be greater than or equal to 0")
         if priority < 0:
             raise ValueError("priority must be greater than or equal to 0")
+
         payload = {
             "status": None,
             "priority": priority,
@@ -69,11 +74,7 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not None and not callable(func):
-            # Correct wording
-            raise TypeError("func must be callable")
-
-        queue = queue if queue else self.col
+        queue = queue if queue is not None else self.col
         queue.insert_one(self._payload(func, args, kwargs, priority, retries))
 
     def bulk_enqueue(
@@ -85,10 +86,7 @@ class MonquServer:
         priority: int = 0,
         retries: int = 0,
     ):
-        if func is not None and not callable(func):
-            raise TypeError("func must be callable")
-
-        queue = queue if queue else self.queue
+        queue = queue if queue is not None else self.queue
         self._bulk_queue[queue] += [
             self._payload(func, args, kwargs, priority, retries)
         ]
