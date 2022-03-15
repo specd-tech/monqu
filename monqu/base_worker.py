@@ -28,7 +28,7 @@ class BaseWorker(ABC):
         self._shutdown = False
 
     def call_func(self, func: dict, bulk: bool = False) -> ReplaceOne | None:
-        """Unpacks and calls serialized function.
+        """Deserializes and calls function.
 
         Args:
             func: Dictionary containing a serialized function and auxiliary/additional information.
