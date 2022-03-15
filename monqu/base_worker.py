@@ -5,6 +5,11 @@ from bson import Binary, ObjectId
 from datetime import datetime
 from abc import ABC
 
+"""TODO
+convert find_and where not needed
+for doc strings should it be pymongo or MongoDB
+"""
+
 
 # when finished make all vars private
 class BaseWorker(ABC):
@@ -16,14 +21,14 @@ class BaseWorker(ABC):
         prefetch: int = 0,
     ):
         self.client = MongoClient(mongo_connection)
-        if self.client.topology_description.topology_type:
-            self._is_replica_set = True
-        else:
-            self._is_replica_set = False
+        self._is_replica_set = (
+            True if self.client.topology_description.topology_type else False
+        )
         # multiqueue
         self.col = self.client[database][queue]
         self._local_queue = []
         self.prefetch = prefetch
+        # Not implemented
         self._pause = False
         self._shutdown = False
 
@@ -36,7 +41,7 @@ class BaseWorker(ABC):
 
         Returns:
             If bulk is False there is no return value. If bulk is True the called function's result is serialized and
-            returned.
+            returned in a pymongo ReplaceOne object.
 
         """
         try:
@@ -50,8 +55,6 @@ class BaseWorker(ABC):
                 returned = loads(func.get("func"))(**loads(func.get("kwargs")))
             else:
                 returned = loads(func.get("func"))()
-            # maybe not include returned change to if returned:
-            # if returned is not None:
             # Does it need to be find_one_and_replace
             # ObjectId(func.get("_id"))}?
 
@@ -89,7 +92,7 @@ class BaseWorker(ABC):
                 )
 
     # remove bulk and keep it funcs vs func
-    def bulk_call_funcs(self, funcs: list[dict]):
+    def bulk_call_funcs(self, funcs: list[dict]) -> None:
         """Calls multiple functions and inserts the results to the queue.
 
         Passes funcs to call_func with bulk flag set to true so the functions' results are returned. The returned
@@ -114,9 +117,10 @@ class BaseWorker(ABC):
 
         """
         start_time = datetime.now()
+        # Converts funcs in cursor to dictionary and adds start_time. This needs to be done before None check.
         funcs = [dict(func, start_time=start_time) for func in cursor]
 
-        if funcs:
+        if funcs is not None:
             self.col.update_many(
                 {"_id": {"$in": [func.get("_id") for func in funcs]}},
                 {"$set": {"status": "running", "start_time": start_time}},
@@ -166,11 +170,9 @@ class BaseWorker(ABC):
         """
         with self.client.start_session() as session:
             with session.start_transaction():
-
                 cursor = self.col.aggregate(
                     [
                         {"$match": {"status": {"$in": [None, "retry"]}}},
-                        # priority for random? sort=[("priority", -1), ("_id", 1)],
                         {"$sample": {"size": self.prefetch}},
                     ],
                     session=session,
@@ -196,7 +198,7 @@ class BaseWorker(ABC):
             sort=[("priority", -1), ("_id", 1)],
         )
 
-        if func:
+        if func is not None:
             func["start_time"] = start_time
             return func
         else:
@@ -220,14 +222,13 @@ class BaseWorker(ABC):
             sort=[("priority", -1), ("_id", -1)],
         )
 
-        if func:
+        if func is not None:
             func["start_time"] = start_time
             return func
         else:
             return None
 
     def _random_id(self) -> str | None:
-        # add way to use proities with sample
         sample = list(
             self.col.aggregate(
                 [
@@ -238,7 +239,7 @@ class BaseWorker(ABC):
             )
         )
 
-        if sample:
+        if sample is not None:
             return sample[0].get("_id")
         else:
             return None
@@ -252,30 +253,30 @@ class BaseWorker(ABC):
             {"$set": {"status": "running", "start_time": start_time}},
         )
 
-        if func:
+        if func is not None:
             func["start_time"] = start_time
             return func
         else:
             return None
 
     # change to call func if exist else return None
-    def by_id(self, mongo_id: str) -> dict | None:
+    def by_id(self, mongodb_id: str) -> dict | None:
         """
 
         Args:
-            mongo_id:
+            mongodb_id:
 
         Returns:
 
         """
         start_time = datetime.now()
-        # Check staus to see if it has been complted maybe make this for failed tasks
+        # Check status to see if it has been completed maybe make this for failed tasks
         func = self.col.find_one_and_update(
-            {"_id": mongo_id}, {"$set": {"status": "running", "start_time": start_time}}
+            {"_id": mongodb_id}, {"$set": {"status": "running", "start_time": start_time}}
         )
 
         # Change this to return error or something
-        if func:
+        if func is not None:
             func["start_time"] = start_time
             return func
         else:
